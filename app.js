@@ -8,31 +8,15 @@
   var VARIABLE_CATEGORIES = ["Vacation/Travel", "Dining & Groceries", "Shopping", "Transport (non-car)",
     "Entertainment/Subscriptions", "Health/Wellness", "Gifts", "Other"];
 
-  var DEFAULT_BILLS = [
-    { name: "Apartment Rental", amount: 2600, due_day: 1 },
-    { name: "Car Installment", amount: 1693, due_day: 5 },
-    { name: "Parents Monthly Allowance", amount: 1000, due_day: 1 },
-    { name: "Contribution to Family's Savings", amount: 200, due_day: 1 },
-    { name: "Car Petrol", amount: 250, due_day: 5 },
-    { name: "Apartment Cleaning", amount: 200, due_day: 1 },
-    { name: "Car Cash Card & Misc", amount: 100, due_day: 5 },
-    { name: "Term Life Insurance (Aviva)", amount: 101.30, due_day: 1 },
-    { name: "Student Loan Repayment", amount: 102, due_day: 1 },
-    { name: "Telecommunication Bills", amount: 80, due_day: 1 },
-    { name: "ViewQwest Billing", amount: 50.74, due_day: 1 },
-    { name: "Netflix", amount: 29.98, due_day: 1 },
-    { name: "Youtube Music Premium", amount: 13.98, due_day: 1 },
-    { name: "Youtube Scribblesflow Workspace", amount: 12.21, due_day: 1 },
-    { name: "Apple iCloud 2TB", amount: 14.12, due_day: 1 }
-  ];
+  var DEFAULT_BILLS = [];
 
   var DEFAULT_ASSUMPTIONS = {
-    dob: "1987-09-16", target_age: 45, start_date: "2026-08-01",
-    monthly_income: 24687, cpf_employee: 1603, cpf_employer: 1362.55, income_tax_monthly: 3020.27,
-    bonus_pct: 0.10, bonus_month: 3, switch_month: 18, post_switch_income: 9468, post_switch_tax_pct: 0.10,
-    tax_lag_months: 12, settle_month: 24, settle_cash: 117000, cpf_refund: 209000,
-    cash_on_hand: 85000, investment_value_usd: 175916.55, usd_sgd_rate: 1.29, cpf_oa: 114142, cpf_sa: 127020,
-    investment_return_annual: 0.07, cpf_return_annual: 0.033, bridge_target: 1050000, variable_budget: 3000
+    dob: "1990-01-01", target_age: 45,
+    monthly_income: 0, cpf_employee: 0, cpf_employer: 0, income_tax_monthly: 0,
+    bonus_pct: 0, bonus_month: 3, switch_month: 999, post_switch_income: 0, post_switch_tax_pct: 0.10,
+    tax_lag_months: 12, settle_month: 999, settle_cash: 0, cpf_refund: 0,
+    cash_on_hand: 0, investment_value_usd: 0, usd_sgd_rate: 1.29, cpf_oa: 0, cpf_sa: 0,
+    investment_return_annual: 0.07, cpf_return_annual: 0.033, bridge_target: 1000000, variable_budget: 0
   };
 
   var state = {
@@ -105,7 +89,8 @@
     var userId = state.session.user.id;
     var { data: existingAssumptions } = await supabase.from("assumptions").select("user_id").eq("user_id", userId).maybeSingle();
     if (!existingAssumptions) {
-      await supabase.from("assumptions").insert(Object.assign({ user_id: userId }, DEFAULT_ASSUMPTIONS));
+      var seedData = Object.assign({ user_id: userId, start_date: toDateStr(new Date()) }, DEFAULT_ASSUMPTIONS);
+      await supabase.from("assumptions").insert(seedData);
     }
     var { data: existingBills } = await supabase.from("recurring_bills").select("id").eq("user_id", userId).limit(1);
     if (!existingBills || existingBills.length === 0) {
