@@ -1,7 +1,9 @@
 (function () {
   "use strict";
 
-  var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, storage: window.localStorage, storageKey: "runway-auth" }
+  });
 
   var VARIABLE_CATEGORIES = ["Vacation/Travel", "Dining & Groceries", "Shopping", "Transport (non-car)",
     "Entertainment/Subscriptions", "Health/Wellness", "Gifts", "Other"];
@@ -230,7 +232,9 @@
     var projected = atTarget ? atTarget.liquid : 0;
     var gap = state.assumptions.bridge_target - projected;
 
+    var startDate = new Date(state.assumptions.start_date + "T00:00:00");
     var now = new Date();
+    if (now < startDate) now = startDate;
     var dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     var day = now.getDate();
     var fixedBudget = fixedBudgetTotal();
@@ -247,12 +251,12 @@
         '<div class="stat-box"><div class="stat-label">Projected at ' + state.assumptions.target_age + '</div><div class="stat-value">' + fmtMoney(projected) + '</div></div>' +
       '</div>' +
       (gap > 0
-        ? '<div class="rw-card" style="display:flex;align-items:center;gap:10px;"><i class="ti ti-trending-down" style="font-size:20px;color:var(--warn);"></i><div><div class="stat-label">Short of your target by</div><div class="stat-value" style="color:var(--warn);">' + fmtMoney(gap) + '</div></div></div>'
-        : '<div class="rw-card" style="display:flex;align-items:center;gap:10px;"><i class="ti ti-trending-up" style="font-size:20px;color:var(--good);"></i><div><div class="stat-label">Ahead of your target by</div><div class="stat-value" style="color:var(--good);">' + fmtMoney(-gap) + '</div></div></div>') +
+        ? '<div class="rw-card" style="display:flex;align-items:center;gap:10px;"><i class="ti ti-trending-down" style="font-size:23px;color:var(--warn);"></i><div><div class="stat-label">Short of your target by</div><div class="stat-value" style="color:var(--warn);">' + fmtMoney(gap) + '</div></div></div>'
+        : '<div class="rw-card" style="display:flex;align-items:center;gap:10px;"><i class="ti ti-trending-up" style="font-size:23px;color:var(--good);"></i><div><div class="stat-label">Ahead of your target by</div><div class="stat-value" style="color:var(--good);">' + fmtMoney(-gap) + '</div></div></div>') +
       '<div class="rw-card">' +
-        '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px;"><span style="color:var(--muted);">This month</span><span style="font-weight:600;">' + fmtMoney(spentSoFar) + ' of ' + fmtMoney(totalBudget) + '</span></div>' +
+        '<div style="display:flex;justify-content:space-between;font-size:15px;margin-bottom:8px;"><span style="color:var(--muted);">This month</span><span style="font-weight:600;">' + fmtMoney(spentSoFar) + ' of ' + fmtMoney(totalBudget) + '</span></div>' +
         '<div class="pace-bar-track"><div class="pace-bar-fill" style="width:' + Math.min(100, pctSpent) + '%;background:' + (pctSpent > pctDays ? "var(--warn)" : "var(--good)") + ';"></div></div>' +
-        '<div style="font-size:11px;color:var(--muted);margin-top:6px;">Day ' + day + ' of ' + dim + ', ' + (pctSpent > pctDays ? "ahead of pace" : "on pace") + '</div>' +
+        '<div style="font-size:13px;color:var(--muted);margin-top:6px;">Day ' + day + ' of ' + dim + ', ' + (pctSpent > pctDays ? "ahead of pace" : "on pace") + '</div>' +
       '</div>';
   }
 
@@ -275,17 +279,17 @@
     var rows = monthEntries.length ? monthEntries.map(function (e) {
       var confirming = state.deleteConfirmId === e.id;
       return '<div class="rw-row">' +
-        '<div><div style="font-size:13px;font-weight:500;">' + (e.description || e.category) + '</div>' +
-        '<div style="font-size:11px;color:var(--muted);">' + e.date.slice(5) + ', ' + e.category + '</div></div>' +
-        '<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:13px;">' + fmtMoney(e.amount) + '</span>' +
+        '<div><div style="font-size:15px;font-weight:500;">' + (e.description || e.category) + '</div>' +
+        '<div style="font-size:13px;color:var(--muted);">' + e.date.slice(5) + ', ' + e.category + '</div></div>' +
+        '<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:15px;">' + fmtMoney(e.amount) + '</span>' +
         (confirming
-          ? '<button class="icon-sm" data-confirm-del="' + e.id + '" style="color:var(--warn);font-weight:600;font-size:11px;">Delete?</button>'
+          ? '<button class="icon-sm" data-confirm-del="' + e.id + '" style="color:var(--warn);font-weight:600;font-size:13px;">Delete?</button>'
           : '<button class="icon-sm" data-del="' + e.id + '"><i class="ti ti-trash"></i></button>') +
         '</div></div>';
     }).join("") : '<div class="empty-note">No transactions logged for this month yet.</div>';
 
     el.innerHTML =
-      '<input id="qa-amount" type="text" inputmode="decimal" placeholder="0.00" style="width:100%;font-size:22px;padding:10px 12px;margin-bottom:12px;" />' +
+      '<input id="qa-amount" type="text" inputmode="decimal" placeholder="0.00" style="width:100%;font-size:25px;padding:10px 12px;margin-bottom:12px;" />' +
       '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">' + chips + '</div>' +
       '<input id="qa-desc" type="text" placeholder="Description (optional)" style="width:100%;margin-bottom:12px;" />' +
       '<div style="display:flex;gap:10px;margin-bottom:18px;">' +
@@ -294,10 +298,10 @@
       '</div>' +
       '<div class="rw-monthnav">' +
         '<button class="rw-monthbtn" id="log-prev" ' + (atStart ? "disabled" : "") + '><i class="ti ti-chevron-left"></i></button>' +
-        '<span style="font-size:13px;font-weight:600;">' + monthNameYear(d) + '</span>' +
+        '<span style="font-size:15px;font-weight:600;">' + monthNameYear(d) + '</span>' +
         '<button class="rw-monthbtn" id="log-next"><i class="ti ti-chevron-right"></i></button>' +
       '</div>' +
-      '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Transactions</div>' +
+      '<div style="font-size:14px;color:var(--muted);margin-bottom:8px;">Transactions</div>' +
       '<div class="rw-card">' + rows + '</div>';
 
     document.querySelectorAll('#screen-log .rw-chip').forEach(function (chip) {
@@ -363,17 +367,17 @@
       }
       if (b.paid) {
         return '<div class="rw-row">' +
-          '<div><div style="font-size:13px;font-weight:500;">' + b.name + '</div><div style="font-size:11px;color:var(--muted);">Expected ' + fmtMoney(b.amount) + '</div></div>' +
-          '<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:13px;color:var(--good);">' + fmtMoney(b.paidAmount) + '</span>' +
+          '<div><div style="font-size:15px;font-weight:500;">' + b.name + '</div><div style="font-size:13px;color:var(--muted);">Expected ' + fmtMoney(b.amount) + '</div></div>' +
+          '<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:15px;color:var(--good);">' + fmtMoney(b.paidAmount) + '</span>' +
           '<button class="icon-sm" data-undo-bill="' + b.entryId + '"><i class="ti ti-rotate-2"></i></button></div></div>';
       }
       return '<div class="rw-row">' +
-        '<div><div style="font-size:13px;font-weight:500;">' + b.name + '</div><div style="font-size:11px;color:var(--muted);">Expected ' + fmtMoney(b.amount) + '</div></div>' +
-        '<button class="btn btn-secondary" style="padding:7px 12px;font-size:12px;" data-mark-paid="' + b.id + '">Mark paid</button></div>';
+        '<div><div style="font-size:15px;font-weight:500;">' + b.name + '</div><div style="font-size:13px;color:var(--muted);">Expected ' + fmtMoney(b.amount) + '</div></div>' +
+        '<button class="btn btn-secondary" style="padding:7px 12px;font-size:14px;" data-mark-paid="' + b.id + '">Mark paid</button></div>';
     }).join("");
 
     el.innerHTML =
-      '<div class="rw-monthnav"><span style="font-size:13px;font-weight:600;">' + monthNameYear(d) + '</span></div>' +
+      '<div class="rw-monthnav"><span style="font-size:15px;font-weight:600;">' + monthNameYear(d) + '</span></div>' +
       '<div class="rw-card">' + (rows || '<div class="empty-note">No recurring bills yet.</div>') + '</div>' +
       '<button class="btn btn-secondary btn-full" id="add-bill-btn">+ Add recurring bill</button>' +
       '<div id="new-bill-row"></div>';
@@ -455,13 +459,13 @@
     el.innerHTML =
       '<div class="rw-monthnav">' +
         '<button class="rw-monthbtn" id="an-prev" ' + (atStart ? "disabled" : "") + '><i class="ti ti-chevron-left"></i></button>' +
-        '<span style="font-size:13px;font-weight:600;">' + monthNameYear(d) + '</span>' +
+        '<span style="font-size:15px;font-weight:600;">' + monthNameYear(d) + '</span>' +
         '<button class="rw-monthbtn" id="an-next"><i class="ti ti-chevron-right"></i></button>' +
       '</div>' +
-      '<div class="rw-card"><div style="font-size:12px;color:var(--muted);margin-bottom:10px;">By category</div>' + catRows + '</div>' +
+      '<div class="rw-card"><div style="font-size:14px;color:var(--muted);margin-bottom:10px;">By category</div>' + catRows + '</div>' +
       '<div class="rw-card" style="display:flex;justify-content:space-between;align-items:center;">' +
-        '<span style="font-size:13px;color:var(--muted);">Vs previous month</span>' +
-        '<span style="font-size:13px;font-weight:600;">' + vsPrevText + '</span></div>';
+        '<span style="font-size:15px;color:var(--muted);">Vs previous month</span>' +
+        '<span style="font-size:15px;font-weight:600;">' + vsPrevText + '</span></div>';
 
     document.getElementById("an-prev").addEventListener("click", function () { shiftMonth(-1); });
     document.getElementById("an-next").addEventListener("click", function () { shiftMonth(1); });
@@ -479,20 +483,20 @@
 
     el.innerHTML =
       '<div style="display:flex;justify-content:flex-end;margin-bottom:8px;">' +
-        '<button class="btn btn-secondary" id="toggle-assumptions" style="font-size:12px;padding:7px 12px;display:flex;align-items:center;gap:6px;">' +
+        '<button class="btn btn-secondary" id="toggle-assumptions" style="font-size:14px;padding:7px 12px;display:flex;align-items:center;gap:6px;">' +
         '<i class="ti ti-adjustments"></i> Edit assumptions</button></div>' +
       '<div class="rw-card" id="assumptions-panel" style="display:' + (state.assumptionsOpen ? "block" : "none") + ';">' +
         assumptionsFormHtml(a) +
       '</div>' +
       '<div class="rw-card">' +
-        '<div class="rw-row"><div><div style="font-size:13px;font-weight:500;">Now, age ' + currentAgeYears() + '</div>' +
-          '<div style="font-size:11px;color:var(--muted);">' + fmtMoney(a.cash_on_hand) + ' cash on hand</div></div>' +
+        '<div class="rw-row"><div><div style="font-size:15px;font-weight:500;">Now, age ' + currentAgeYears() + '</div>' +
+          '<div style="font-size:13px;color:var(--muted);">' + fmtMoney(a.cash_on_hand) + ' cash on hand</div></div>' +
           '<i class="ti ti-check" style="color:var(--good);"></i></div>' +
-        '<div class="rw-row"><div><div style="font-size:13px;font-weight:500;">Semi-retire, age ' + a.target_age + '</div>' +
-          '<div style="font-size:11px;color:var(--muted);">Target ' + fmtMoney(a.bridge_target) + '</div></div>' +
-          '<span style="font-size:11px;color:' + (gap > 0 ? "var(--warn)" : "var(--good)") + ';">' + (gap > 0 ? "Short " + fmtMoney(gap) : "Ahead " + fmtMoney(-gap)) + '</span></div>' +
-        '<div class="rw-row"><div><div style="font-size:13px;font-weight:500;">CPF unlocks, age 55</div><div style="font-size:11px;color:var(--muted);">Partial withdrawal above your Full Retirement Sum</div></div><i class="ti ti-lock" style="color:var(--muted);"></i></div>' +
-        '<div class="rw-row"><div><div style="font-size:13px;font-weight:500;">CPF LIFE begins, age 65</div><div style="font-size:11px;color:var(--muted);">Lifetime monthly payout starts</div></div><i class="ti ti-lock" style="color:var(--muted);"></i></div>' +
+        '<div class="rw-row"><div><div style="font-size:15px;font-weight:500;">Semi-retire, age ' + a.target_age + '</div>' +
+          '<div style="font-size:13px;color:var(--muted);">Target ' + fmtMoney(a.bridge_target) + '</div></div>' +
+          '<span style="font-size:13px;color:' + (gap > 0 ? "var(--warn)" : "var(--good)") + ';">' + (gap > 0 ? "Short " + fmtMoney(gap) : "Ahead " + fmtMoney(-gap)) + '</span></div>' +
+        '<div class="rw-row"><div><div style="font-size:15px;font-weight:500;">CPF unlocks, age 55</div><div style="font-size:13px;color:var(--muted);">Partial withdrawal above your Full Retirement Sum</div></div><i class="ti ti-lock" style="color:var(--muted);"></i></div>' +
+        '<div class="rw-row"><div><div style="font-size:15px;font-weight:500;">CPF LIFE begins, age 65</div><div style="font-size:13px;color:var(--muted);">Lifetime monthly payout starts</div></div><i class="ti ti-lock" style="color:var(--muted);"></i></div>' +
       '</div>';
 
     document.getElementById("toggle-assumptions").addEventListener("click", function () {
@@ -518,7 +522,7 @@
       return '<div class="rw-field"><label>' + f[1] + '</label><input type="number" step="any" id="a-' + f[0] + '" value="' + f[2] + '" /></div>';
     }).join("") +
       '<button class="btn btn-primary btn-full" id="save-assumptions">Save &amp; recalculate</button>' +
-      '<div id="recalc-status" style="font-size:11px;color:var(--good);margin-top:8px;text-align:center;min-height:14px;"></div>';
+      '<div id="recalc-status" style="font-size:13px;color:var(--good);margin-top:8px;text-align:center;min-height:14px;"></div>';
   }
 
   function wireAssumptionsForm() {
