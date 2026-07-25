@@ -548,6 +548,7 @@
   function assumptionsFormHtml(a) {
     var fields = [
       ["target_age", "Target semi-retire age", a.target_age],
+      ["bridge_target", "Amount needed at retirement age (S$)", a.bridge_target],
       ["monthly_income", "Monthly gross income (S$)", a.monthly_income],
       ["investment_return_annual", "Annual investment return (as 0.07 = 7%)", a.investment_return_annual],
       ["switch_month", "Career switch in (months from now)", a.switch_month],
@@ -557,7 +558,8 @@
       ["investment_value_usd", "Investment portfolio value (US$)", a.investment_value_usd],
       ["usd_sgd_rate", "USD/SGD exchange rate", a.usd_sgd_rate]
     ];
-    return fields.map(function (f) {
+    var dobField = '<div class="rw-field"><label>Date of birth</label><input type="date" id="a-dob" value="' + a.dob + '" /></div>';
+    return dobField + fields.map(function (f) {
       return '<div class="rw-field"><label>' + f[1] + '</label><input type="number" step="any" id="a-' + f[0] + '" value="' + f[2] + '" /></div>';
     }).join("") +
       '<button class="btn btn-primary btn-full" id="save-assumptions">Save &amp; recalculate</button>' +
@@ -566,9 +568,11 @@
 
   function wireAssumptionsForm() {
     document.getElementById("save-assumptions").addEventListener("click", async function () {
-      var fields = ["target_age", "monthly_income", "investment_return_annual", "switch_month", "post_switch_income", "variable_budget", "cash_on_hand", "investment_value_usd", "usd_sgd_rate"];
+      var numericFields = ["target_age", "bridge_target", "monthly_income", "investment_return_annual", "switch_month", "post_switch_income", "variable_budget", "cash_on_hand", "investment_value_usd", "usd_sgd_rate"];
       var updates = {};
-      fields.forEach(function (f) { updates[f] = parseFloat(document.getElementById("a-" + f).value); });
+      numericFields.forEach(function (f) { updates[f] = parseFloat(document.getElementById("a-" + f).value); });
+      var dobValue = document.getElementById("a-dob").value;
+      if (dobValue) updates.dob = dobValue;
       var { error } = await supabase.from("assumptions").update(updates).eq("user_id", state.session.user.id);
       if (error) { alert("Couldn't save: " + error.message); return; }
       Object.assign(state.assumptions, updates);
