@@ -38,7 +38,8 @@
   var state = {
     session: null, bills: [], expenses: [], assumptions: null,
     viewMonthIdx: 0, selectedCategory: null, activeTab: "home",
-    editingBillId: null, deleteConfirmId: null, assumptionsOpen: false
+    editingBillId: null, deleteConfirmId: null, assumptionsOpen: false,
+    editingBillDefId: null, deleteBillConfirmId: null
   };
 
   function fmtMoney(n) {
@@ -256,7 +257,7 @@
       '<div class="rw-card">' +
         '<div style="display:flex;justify-content:space-between;font-size:15px;margin-bottom:8px;"><span style="color:var(--muted);">This month</span><span style="font-weight:600;">' + fmtMoney(spentSoFar) + ' of ' + fmtMoney(totalBudget) + '</span></div>' +
         '<div class="pace-bar-track"><div class="pace-bar-fill" style="width:' + Math.min(100, pctSpent) + '%;background:' + (pctSpent > pctDays ? "var(--warn)" : "var(--good)") + ';"></div></div>' +
-        '<div style="font-size:13px;color:var(--muted);margin-top:6px;">Day ' + day + ' of ' + dim + ', ' + (pctSpent > pctDays ? "ahead of pace" : "on pace") + '</div>' +
+        '<div style="font-size:13px;color:var(--muted);margin-top:6px;">Day ' + day + ' of ' + dim + ' &middot; ' + monthNameYear(now) + ', ' + (pctSpent > pctDays ? "ahead of pace" : "on pace") + '</div>' +
       '</div>';
   }
 
@@ -358,6 +359,18 @@
     var d = viewDate();
     var statuses = billsStatusForMonth(d);
     var rows = statuses.map(function (b) {
+      if (state.editingBillDefId === b.id) {
+        var confirming = state.deleteBillConfirmId === b.id;
+        return '<div class="rw-edit-row active" style="flex-wrap:wrap;">' +
+          '<input type="text" id="billdef-name-' + b.id + '" value="' + b.name.replace(/"/g, "&quot;") + '" placeholder="Bill name" style="flex:1.6;min-width:120px;" />' +
+          '<input type="number" id="billdef-amount-' + b.id + '" value="' + b.amount + '" placeholder="0.00" style="flex:1;min-width:80px;" />' +
+          '<button class="icon-sm" data-save-billdef="' + b.id + '"><i class="ti ti-check"></i></button>' +
+          '<button class="icon-sm" data-cancel-billdef="' + b.id + '"><i class="ti ti-x"></i></button>' +
+          (confirming
+            ? '<button class="icon-sm" data-confirm-delete-bill="' + b.id + '" style="color:var(--warn);font-weight:600;font-size:12px;">Delete bill?</button>'
+            : '<button class="icon-sm" data-delete-bill="' + b.id + '" style="color:var(--warn);"><i class="ti ti-trash"></i></button>') +
+        '</div>';
+      }
       if (state.editingBillId === b.id) {
         return '<div class="rw-edit-row active">' +
           '<input type="number" id="bill-input-' + b.id + '" value="' + b.amount + '" style="flex:1;" />' +
@@ -365,15 +378,16 @@
           '<button class="icon-sm" data-cancel-bill="' + b.id + '"><i class="ti ti-x"></i></button>' +
         '</div>';
       }
+      var editBtn = '<button class="icon-sm" data-edit-bill-def="' + b.id + '" aria-label="Edit bill"><i class="ti ti-pencil"></i></button>';
       if (b.paid) {
         return '<div class="rw-row">' +
           '<div><div style="font-size:15px;font-weight:500;">' + b.name + '</div><div style="font-size:13px;color:var(--muted);">Expected ' + fmtMoney(b.amount) + '</div></div>' +
           '<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:15px;color:var(--good);">' + fmtMoney(b.paidAmount) + '</span>' +
-          '<button class="icon-sm" data-undo-bill="' + b.entryId + '"><i class="ti ti-rotate-2"></i></button></div></div>';
+          '<button class="icon-sm" data-undo-bill="' + b.entryId + '"><i class="ti ti-rotate-2"></i></button>' + editBtn + '</div></div>';
       }
       return '<div class="rw-row">' +
         '<div><div style="font-size:15px;font-weight:500;">' + b.name + '</div><div style="font-size:13px;color:var(--muted);">Expected ' + fmtMoney(b.amount) + '</div></div>' +
-        '<button class="btn btn-secondary" style="padding:7px 12px;font-size:14px;" data-mark-paid="' + b.id + '">Mark paid</button></div>';
+        '<div style="display:flex;align-items:center;gap:10px;"><button class="btn btn-secondary" style="padding:7px 12px;font-size:14px;" data-mark-paid="' + b.id + '">Mark paid</button>' + editBtn + '</div></div>';
     }).join("");
 
     el.innerHTML =
@@ -387,6 +401,46 @@
     });
     document.querySelectorAll('[data-cancel-bill]').forEach(function (btn) {
       btn.addEventListener("click", function () { state.editingBillId = null; renderBills(); });
+    });
+    document.querySelectorAll('[data-edit-bill-def]').forEach(function (btn) {
+      btn.addEventListener("click", function () { state.editingBillDefId = btn.dataset.editBillDef; renderBills(); });
+    });
+    document.querySelectorAll('[data-cancel-billdef]').forEach(function (btn) {
+      btn.addEventListener("click", function () { state.editingBillDefId = null; state.deleteBillConfirmId = null; renderBills(); });
+    });
+    document.querySelectorAll('[data-save-billdef]').forEach(function (btn) {
+      btn.addEventListener("click", async function () {
+        var billId = btn.dataset.saveBilldef;
+        var name = document.getElementById("billdef-name-" + billId).value.trim();
+        var amount = parseFloat(document.getElementById("billdef-amount-" + billId).value);
+        if (!name || !amount || amount <= 0) return;
+        var { error } = await supabase.from("recurring_bills").update({ name: name, amount: amount }).eq("id", billId);
+        if (error) { alert("Couldn't save: " + error.message); return; }
+        var bill = state.bills.find(function (b) { return b.id === billId; });
+        if (bill) { bill.name = name; bill.amount = amount; }
+        state.editingBillDefId = null;
+        renderBills(); renderHome();
+      });
+    });
+    document.querySelectorAll('[data-delete-bill]').forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        state.deleteBillConfirmId = btn.dataset.deleteBill;
+        renderBills();
+        setTimeout(function () {
+          if (state.deleteBillConfirmId === btn.dataset.deleteBill) { state.deleteBillConfirmId = null; renderBills(); }
+        }, 3000);
+      });
+    });
+    document.querySelectorAll('[data-confirm-delete-bill]').forEach(function (btn) {
+      btn.addEventListener("click", async function () {
+        var billId = btn.dataset.confirmDeleteBill;
+        var { error } = await supabase.from("recurring_bills").update({ archived: true }).eq("id", billId);
+        if (error) { alert("Couldn't delete: " + error.message); return; }
+        state.bills = state.bills.filter(function (b) { return b.id !== billId; });
+        state.editingBillDefId = null;
+        state.deleteBillConfirmId = null;
+        renderBills(); renderHome();
+      });
     });
     document.querySelectorAll('[data-save-bill]').forEach(function (btn) {
       btn.addEventListener("click", async function () {
