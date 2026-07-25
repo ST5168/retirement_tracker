@@ -558,7 +558,21 @@
       ["investment_value_usd", "Investment portfolio value (US$)", a.investment_value_usd],
       ["usd_sgd_rate", "USD/SGD exchange rate", a.usd_sgd_rate]
     ];
-    var dobField = '<div class="rw-field"><label>Date of birth</label><input type="date" id="a-dob" value="' + a.dob + '" /></div>';
+    var dobParts = a.dob.split("-");
+    var dobYear = dobParts[0], dobMonth = parseInt(dobParts[1], 10), dobDay = parseInt(dobParts[2], 10);
+    var monthOptions = ["January","February","March","April","May","June","July","August","September","October","November","December"]
+      .map(function (name, i) { return '<option value="' + (i + 1) + '"' + (i + 1 === dobMonth ? " selected" : "") + '>' + name + '</option>'; }).join("");
+    var dayOptions = "";
+    for (var dd = 1; dd <= 31; dd++) { dayOptions += '<option value="' + dd + '"' + (dd === dobDay ? " selected" : "") + '>' + dd + '</option>'; }
+    var yearOptions = "";
+    var thisYear = new Date().getFullYear();
+    for (var yy = thisYear - 18; yy >= thisYear - 90; yy--) { yearOptions += '<option value="' + yy + '"' + (String(yy) === dobYear ? " selected" : "") + '>' + yy + '</option>'; }
+    var dobField = '<div class="rw-field"><label>Date of birth</label>' +
+      '<div class="dob-row">' +
+        '<select id="a-dob-day">' + dayOptions + '</select>' +
+        '<select id="a-dob-month">' + monthOptions + '</select>' +
+        '<select id="a-dob-year">' + yearOptions + '</select>' +
+      '</div></div>';
     return dobField + fields.map(function (f) {
       return '<div class="rw-field"><label>' + f[1] + '</label><input type="number" step="any" id="a-' + f[0] + '" value="' + f[2] + '" /></div>';
     }).join("") +
@@ -571,8 +585,10 @@
       var numericFields = ["target_age", "bridge_target", "monthly_income", "investment_return_annual", "switch_month", "post_switch_income", "variable_budget", "cash_on_hand", "investment_value_usd", "usd_sgd_rate"];
       var updates = {};
       numericFields.forEach(function (f) { updates[f] = parseFloat(document.getElementById("a-" + f).value); });
-      var dobValue = document.getElementById("a-dob").value;
-      if (dobValue) updates.dob = dobValue;
+      var dobDay = document.getElementById("a-dob-day").value.padStart(2, "0");
+      var dobMonth = document.getElementById("a-dob-month").value.padStart(2, "0");
+      var dobYear = document.getElementById("a-dob-year").value;
+      updates.dob = dobYear + "-" + dobMonth + "-" + dobDay;
       var { error } = await supabase.from("assumptions").update(updates).eq("user_id", state.session.user.id);
       if (error) { alert("Couldn't save: " + error.message); return; }
       Object.assign(state.assumptions, updates);

@@ -61,6 +61,14 @@ input[type=text],input[type=number],input[type=date],input[type=email],input[typ
 .rw-field{margin-bottom:10px;}
 .rw-field label{font-size:14px;color:var(--muted);display:block;margin-bottom:4px;}
 .rw-field input{width:100%;}
+.dob-row{display:flex;gap:8px;}
+.dob-row select{
+  flex:1;min-width:0;border:1px solid var(--border-strong);border-radius:10px;padding:10px 8px;
+  font-size:16px;background:var(--surface-2);color:var(--ink);-webkit-appearance:none;appearance:none;
+}
+.dob-row select:nth-child(1){flex:0.7;}
+.dob-row select:nth-child(2){flex:1.5;}
+.dob-row select:nth-child(3){flex:0.9;}
 
 .btn{border:none;border-radius:10px;padding:11px 16px;font-weight:600;font-size:16px;cursor:pointer;}
 .btn-primary{background:var(--ink);color:#fff;}
