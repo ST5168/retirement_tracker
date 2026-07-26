@@ -1,6 +1,6 @@
 {
-  "name": "Runway — Retire by 45 Plan",
-  "short_name": "Runway",
+  "name": "Retirement Planner",
+  "short_name": "Retirement Planner",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#EEF0EA",

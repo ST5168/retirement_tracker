@@ -23,7 +23,7 @@
     session: null, bills: [], expenses: [], assumptions: null,
     viewMonthIdx: 0, selectedCategory: null, activeTab: "home",
     editingBillId: null, deleteConfirmId: null, assumptionsOpen: false,
-    editingBillDefId: null, deleteBillConfirmId: null
+    editingBillDefId: null, deleteBillConfirmId: null, homeChartView: "daily"
   };
 
   function fmtMoney(n) {
@@ -209,10 +209,56 @@
     renderPlan();
   }
 
+  function dailyVariableSeries(now) {
+    var year = now.getFullYear(), month = now.getMonth();
+    var dim = new Date(year, month + 1, 0).getDate();
+    var todayDay = now.getDate();
+    var monthPrefix = year + "-" + pad(month + 1) + "-";
+    var dayTotals = {};
+    state.expenses.forEach(function (e) {
+      if (e.type === "Variable" && e.date.indexOf(monthPrefix) === 0) {
+        var dayNum = parseInt(e.date.slice(8, 10), 10);
+        dayTotals[dayNum] = (dayTotals[dayNum] || 0) + parseFloat(e.amount);
+      }
+    });
+    var labels = [], cumulative = [];
+    var acc = 0;
+    for (var d = 1; d <= dim; d++) {
+      labels.push(String(d));
+      if (d <= todayDay) {
+        acc += dayTotals[d] || 0;
+        cumulative.push(acc);
+      } else {
+        cumulative.push(null);
+      }
+    }
+    return { labels: labels, cumulative: cumulative };
+  }
+
+  function monthlyTotalsSeries(now, monthsBack) {
+    var labels = [], totals = [];
+    var actuals = actualsByMonth();
+    var names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    for (var i = monthsBack - 1; i >= 0; i--) {
+      var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      var key = monthKeyOf(d);
+      var a = actuals[key] || {};
+      var fixed = a.fixed != null ? a.fixed : (i === 0 ? fixedBudgetTotal() : 0);
+      var variable = a.variable != null ? a.variable : 0;
+      labels.push(names[d.getMonth()]);
+      totals.push(fixed + variable);
+    }
+    return { labels: labels, totals: totals };
+  }
+
+  var homeChart = null;
+
   function renderHome() {
     var el = document.getElementById("screen-home");
     var rows = runProjection();
-    var liquidToday = state.assumptions.cash_on_hand + state.assumptions.investment_value_usd * state.assumptions.usd_sgd_rate;
+    var cash = state.assumptions.cash_on_hand;
+    var investments = state.assumptions.investment_value_usd * state.assumptions.usd_sgd_rate;
+    var totalAssets = cash + investments;
     var bridgeIdx = monthsFromStartToAge(state.assumptions.target_age) - 1;
     var atTarget = rows[Math.min(bridgeIdx, rows.length - 1)];
     var projected = atTarget ? atTarget.liquid : 0;
@@ -224,26 +270,109 @@
     var dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     var day = now.getDate();
     var fixedBudget = fixedBudgetTotal();
-    var totalBudget = fixedBudget + parseFloat(state.assumptions.variable_budget);
+    var variableBudget = parseFloat(state.assumptions.variable_budget);
+    var totalBudget = fixedBudget + variableBudget;
     var thisKey = monthKeyOf(now);
     var actual = actualsByMonth()[thisKey] || {};
-    var spentSoFar = (actual.fixed != null ? actual.fixed : 0) + (actual.variable != null ? actual.variable : 0);
+    var variableSoFar = actual.variable != null ? actual.variable : 0;
+    var fixedForTotal = actual.fixed != null ? actual.fixed : fixedBudget;
+    var fullMonthTotal = variableSoFar + fixedForTotal;
+    var spentSoFar = (actual.fixed != null ? actual.fixed : 0) + variableSoFar;
     var pctSpent = totalBudget > 0 ? Math.round((spentSoFar / totalBudget) * 100) : 0;
     var pctDays = Math.round((day / dim) * 100);
 
     el.innerHTML =
-      '<div class="stat-grid">' +
-        '<div class="stat-box"><div class="stat-label">Liquid today</div><div class="stat-value">' + fmtMoney(liquidToday) + '</div></div>' +
-        '<div class="stat-box"><div class="stat-label">Projected at ' + state.assumptions.target_age + '</div><div class="stat-value">' + fmtMoney(projected) + '</div></div>' +
+      '<div class="stat-grid3">' +
+        '<div class="stat-box"><div class="stat-label">Cash on hand</div><div class="stat-value">' + fmtMoney(cash) + '</div></div>' +
+        '<div class="stat-box"><div class="stat-label">Investments</div><div class="stat-value">' + fmtMoney(investments) + '</div></div>' +
+        '<div class="stat-box"><div class="stat-label">Total assets</div><div class="stat-value">' + fmtMoney(totalAssets) + '</div></div>' +
       '</div>' +
-      (gap > 0
-        ? '<div class="rw-card" style="display:flex;align-items:center;gap:10px;"><i class="ti ti-trending-down" style="font-size:23px;color:var(--warn);"></i><div><div class="stat-label">Short of your target by</div><div class="stat-value" style="color:var(--warn);">' + fmtMoney(gap) + '</div></div></div>'
-        : '<div class="rw-card" style="display:flex;align-items:center;gap:10px;"><i class="ti ti-trending-up" style="font-size:23px;color:var(--good);"></i><div><div class="stat-label">Ahead of your target by</div><div class="stat-value" style="color:var(--good);">' + fmtMoney(-gap) + '</div></div></div>') +
+      '<div class="stat-grid">' +
+        '<div class="stat-box"><div class="stat-label">Projected at ' + state.assumptions.target_age + '</div><div class="stat-value">' + fmtMoney(projected) + '</div></div>' +
+        (gap > 0
+          ? '<div class="stat-box" style="border-color:#F0997B;"><div class="stat-label" style="display:flex;align-items:center;gap:5px;"><i class="ti ti-trending-down" style="font-size:14px;color:var(--warn);"></i>Short of target</div><div class="stat-value" style="color:var(--warn);">' + fmtMoney(gap) + '</div></div>'
+          : '<div class="stat-box" style="border-color:#9fd6b8;"><div class="stat-label" style="display:flex;align-items:center;gap:5px;"><i class="ti ti-trending-up" style="font-size:14px;color:var(--good);"></i>Ahead of target</div><div class="stat-value" style="color:var(--good);">' + fmtMoney(-gap) + '</div></div>') +
+      '</div>' +
+      '<div class="rw-card">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
+          '<div style="font-size:15px;font-weight:500;">Spend</div>' +
+          '<div class="seg" style="width:150px;">' +
+            '<button id="home-btn-daily" class="' + (state.homeChartView !== "monthly" ? "active" : "") + '">Daily</button>' +
+            '<button id="home-btn-monthly" class="' + (state.homeChartView === "monthly" ? "active" : "") + '">Monthly</button>' +
+          '</div>' +
+        '</div>' +
+        '<div style="background:var(--surface-2);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">' +
+          '<div><div style="font-size:12px;color:var(--muted);">Full month total, incl. recurring bills</div>' +
+          '<div style="font-size:20px;font-weight:500;">' + fmtMoney(fullMonthTotal) + ' <span style="font-size:14px;font-weight:400;color:var(--muted);">of ' + fmtMoney(totalBudget) + '</span></div></div>' +
+          '<i class="ti ti-receipt-2" style="font-size:23px;color:var(--muted-2);"></i>' +
+        '</div>' +
+        '<div id="home-chart-legend" style="display:' + (state.homeChartView === "monthly" ? "none" : "flex") + ';flex-wrap:wrap;gap:14px;margin-bottom:10px;font-size:13px;color:var(--muted);">' +
+          '<span style="display:flex;align-items:center;gap:5px;"><span class="swatch" style="border-top:2px solid #2a78d6;"></span>Variable spend</span>' +
+          '<span style="display:flex;align-items:center;gap:5px;"><span class="swatch" style="border-top:2px dashed var(--warn);"></span>Variable budget</span>' +
+        '</div>' +
+        '<div style="position:relative;width:100%;height:220px;">' +
+          '<canvas id="homeChart"></canvas>' +
+        '</div>' +
+      '</div>' +
       '<div class="rw-card">' +
         '<div style="display:flex;justify-content:space-between;font-size:15px;margin-bottom:8px;"><span style="color:var(--muted);">This month</span><span style="font-weight:600;">' + fmtMoney(spentSoFar) + ' of ' + fmtMoney(totalBudget) + '</span></div>' +
         '<div class="pace-bar-track"><div class="pace-bar-fill" style="width:' + Math.min(100, pctSpent) + '%;background:' + (pctSpent > pctDays ? "var(--warn)" : "var(--good)") + ';"></div></div>' +
         '<div style="font-size:13px;color:var(--muted);margin-top:6px;">Day ' + day + ' of ' + dim + ' &middot; ' + monthNameYear(now) + ', ' + (pctSpent > pctDays ? "ahead of pace" : "on pace") + '</div>' +
       '</div>';
+
+    renderHomeChart(now);
+    document.getElementById("home-btn-daily").addEventListener("click", function () {
+      state.homeChartView = "daily";
+      renderHome();
+    });
+    document.getElementById("home-btn-monthly").addEventListener("click", function () {
+      state.homeChartView = "monthly";
+      renderHome();
+    });
+  }
+
+  function renderHomeChart(now) {
+    var canvas = document.getElementById("homeChart");
+    if (!canvas || typeof Chart === "undefined") return;
+    if (homeChart) { homeChart.destroy(); homeChart = null; }
+
+    if (state.homeChartView === "monthly") {
+      var m = monthlyTotalsSeries(now, 6);
+      homeChart = new Chart(canvas, {
+        type: "bar",
+        data: { labels: m.labels, datasets: [{ data: m.totals, backgroundColor: "#2a78d6", borderRadius: 4, maxBarThickness: 28 }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: "#898781", font: { size: 11 } } },
+            y: { grid: { color: "#e1e0d9" }, ticks: { color: "#898781", font: { size: 11 }, callback: function (v) { return "$" + (v / 1000) + "k"; } } }
+          }
+        }
+      });
+    } else {
+      var s = dailyVariableSeries(now);
+      var budgetVal = parseFloat(state.assumptions.variable_budget);
+      var budgetLine = s.labels.map(function () { return budgetVal; });
+      homeChart = new Chart(canvas, {
+        type: "line",
+        data: {
+          labels: s.labels,
+          datasets: [
+            { label: "Variable spend", data: s.cumulative, borderColor: "#2a78d6", borderWidth: 2.5, pointRadius: 0, tension: 0, fill: false, spanGaps: false },
+            { label: "Variable budget", data: budgetLine, borderColor: "#B5502E", borderWidth: 1.5, borderDash: [6, 4], pointRadius: 0, fill: false }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: "#898781", maxTicksLimit: 8, font: { size: 11 } } },
+            y: { grid: { color: "#e1e0d9" }, ticks: { color: "#898781", font: { size: 11 }, callback: function (v) { return "$" + v; } } }
+          }
+        }
+      });
+    }
   }
 
   function renderLog() {

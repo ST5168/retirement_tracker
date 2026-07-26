@@ -3,21 +3,21 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Runway — Retire by 45 Plan</title>
-<link rel="stylesheet" href="styles.css?v=3" />
+<title>Retirement Planner</title>
+<link rel="stylesheet" href="styles.css?v=4" />
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#2F6E52" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Runway" />
+<meta name="apple-mobile-web-app-title" content="Retirement Planner" />
 <link rel="apple-touch-icon" href="icon-180.png" />
 <link rel="icon" href="icon-192.png" />
 </head>
 <body>
 <div id="auth-screen" class="auth-screen">
   <div class="auth-card">
-    <div class="eyebrow">Runway</div>
+    <div class="eyebrow">Retirement Planner</div>
     <h1 id="auth-title">Log in</h1>
     <div id="auth-error" class="auth-error"></div>
     <input id="auth-email" type="email" placeholder="Email" autocomplete="email" />
@@ -31,7 +31,7 @@
   <div class="header">
     <div class="header-top">
       <div>
-        <div class="eyebrow">Runway</div>
+        <div class="eyebrow">Retirement Planner</div>
         <div id="rw-title" class="month-title">Dashboard</div>
       </div>
       <button id="signout-btn" class="icon-btn" aria-label="Sign out"><i class="ti ti-logout"></i></button>
@@ -54,10 +54,11 @@
 </div>
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://unpkg.com/@tabler/icons-webfont@latest/dist/tabler-icons.min.js" defer></script>
 <link rel="stylesheet" href="https://unpkg.com/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
 <script src="config.js"></script>
 <script src="projection.js?v=2"></script>
-<script src="app.js?v=7"></script>
+<script src="app.js?v=8"></script>
 </body>
 </html>
