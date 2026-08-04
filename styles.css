@@ -9,7 +9,8 @@
   --accent:#2F6E52;
 }
 *{box-sizing:border-box;}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans',sans-serif;min-height:100vh;}
+html{overflow-x:hidden;}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
 input,button{font-family:inherit;}
 input[type=text],input[type=number],input[type=date],input[type=email],input[type=password]{
   border:1px solid var(--border-strong);border-radius:10px;padding:10px 12px;font-size:16px;background:var(--surface-2);color:var(--ink);
@@ -98,9 +99,12 @@ input[type=text],input[type=number],input[type=date],input[type=email],input[typ
 .card-sub{font-size:13px;color:var(--muted);margin-bottom:14px;}
 .subsection{font-size:12px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;}
 .total-row{display:flex;justify-content:space-between;padding-top:10px;margin-top:4px;border-top:0.5px solid var(--border);font-size:15px;font-weight:500;}
-.period-row{display:flex;gap:8px;align-items:center;margin-bottom:10px;}
-.period-when{flex:1.1;min-width:0;border:1px solid var(--border-strong);border-radius:8px;padding:9px 10px;font-size:14px;background:var(--surface-2);color:var(--ink);}
-.period-amt{flex:1;min-width:0;border:1px solid var(--border-strong);border-radius:8px;padding:9px 10px;font-size:14px;background:var(--surface-2);color:var(--ink);}
+.period-row{display:flex;gap:6px;align-items:center;margin-bottom:10px;width:100%;}
+.napp-row{display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+.napp-row input{flex:0 0 16px;width:16px;height:16px;}
+.napp-row label{flex:1;font-size:14px;color:var(--ink);margin:0;}
+.period-when{flex:0 0 auto;width:calc(50% - 14px);box-sizing:border-box;border:1px solid var(--border-strong);border-radius:8px;padding:7px 8px;font-size:13px;background:var(--surface-2);color:var(--ink);}
+.period-amt{flex:0 0 auto;width:calc(50% - 14px);box-sizing:border-box;border:1px solid var(--border-strong);border-radius:8px;padding:7px 8px;font-size:13px;background:var(--surface-2);color:var(--ink);}
 .period-date-editor{background:var(--surface-2);border-radius:8px;padding:10px;}
 .rec-card{border-radius:12px;padding:14px;margin-bottom:10px;background:var(--surface-2);}
 
