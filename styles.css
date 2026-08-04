@@ -25,7 +25,7 @@ input[type=text],input[type=number],input[type=date],input[type=email],input[typ
 .auth-toggle a{color:var(--accent);text-decoration:none;font-weight:500;}
 
 /* App shell */
-.app{max-width:480px;margin:0 auto;padding-bottom:92px;}
+.app{max-width:480px;margin:0 auto;padding-bottom:92px;overflow-x:hidden;}
 .header{padding:20px 20px 14px;}
 .header-top{display:flex;justify-content:space-between;align-items:flex-start;}
 .eyebrow{font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);font-weight:600;}
@@ -99,8 +99,8 @@ input[type=text],input[type=number],input[type=date],input[type=email],input[typ
 .subsection{font-size:12px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;}
 .total-row{display:flex;justify-content:space-between;padding-top:10px;margin-top:4px;border-top:0.5px solid var(--border);font-size:15px;font-weight:500;}
 .period-row{display:flex;gap:8px;align-items:center;margin-bottom:10px;}
-.period-when{flex:1.1;border:1px solid var(--border-strong);border-radius:8px;padding:9px 10px;font-size:14px;background:var(--surface-2);color:var(--ink);}
-.period-amt{flex:1;border:1px solid var(--border-strong);border-radius:8px;padding:9px 10px;font-size:14px;background:var(--surface-2);color:var(--ink);}
+.period-when{flex:1.1;min-width:0;border:1px solid var(--border-strong);border-radius:8px;padding:9px 10px;font-size:14px;background:var(--surface-2);color:var(--ink);}
+.period-amt{flex:1;min-width:0;border:1px solid var(--border-strong);border-radius:8px;padding:9px 10px;font-size:14px;background:var(--surface-2);color:var(--ink);}
 .period-date-editor{background:var(--surface-2);border-radius:8px;padding:10px;}
 .rec-card{border-radius:12px;padding:14px;margin-bottom:10px;background:var(--surface-2);}
 

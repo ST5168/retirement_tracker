@@ -726,7 +726,7 @@
 
   function semiRetireFieldsHtml(a) {
     return '<div class="rw-field"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:14px;">' +
-      '<input type="checkbox" id="a-semiretire-na" ' + (!a.semi_retire_date ? "checked" : "") + ' /><label for="a-semiretire-na" style="margin:0;display:inline-block;">Not set yet</label></div>' +
+      '<input type="checkbox" id="a-semiretire-na" style="flex-shrink:0;" ' + (!a.semi_retire_date ? "checked" : "") + ' /><label for="a-semiretire-na" style="margin:0;display:inline-block;min-width:0;">Not set yet</label></div>' +
       '<div id="semiretire-date-wrap" style="display:' + (a.semi_retire_date ? "block" : "none") + ';">' + monthYearSelectHtml("a-semiretire", a.semi_retire_date) + '</div></div>';
   }
 
