@@ -39,7 +39,7 @@
   var state = {
     session: null, bills: [], expenses: [], assumptions: null, incomePeriods: [],
     viewMonthIdx: 0, selectedCategory: null, activeTab: "analysis",
-    editingBillId: null, deleteConfirmId: null, assumptionsOpen: false,
+    editingBillId: null, deleteConfirmId: null, assumptionsOpen: false, editingExpenseId: null,
     editingBillDefId: null, deleteBillConfirmId: null, analysisChartView: "daily",
     editingPeriodId: null, deletePeriodConfirmId: null
   };
@@ -401,11 +401,23 @@
     }).join("");
 
     var rows = monthEntries.length ? monthEntries.map(function (e) {
+      if (state.editingExpenseId === e.id) {
+        var optsHtml = VARIABLE_CATEGORIES.map(function (c) { return '<option value="' + c + '"' + (c === e.category ? " selected" : "") + '>' + c + '</option>'; }).join("");
+        return '<div class="edit-row" data-edit-expense-row="' + e.id + '">' +
+          '<div class="field-block"><label class="field-label">Description</label><input type="text" id="ee-desc-' + e.id + '" value="' + (e.description || "").replace(/"/g, "&quot;") + '" /></div>' +
+          '<div class="edit-row-fields"><div class="field-block"><label class="field-label">Category</label><select id="ee-cat-' + e.id + '">' + optsHtml + '</select></div>' +
+          '<div class="field-block"><label class="field-label">Amount (S$)</label><input type="number" id="ee-amount-' + e.id + '" value="' + e.amount + '" /></div></div>' +
+          '<div class="field-block"><label class="field-label">Date</label><input type="date" id="ee-date-' + e.id + '" value="' + e.date + '" min="' + state.assumptions.start_date + '" /></div>' +
+          '<div class="edit-actions"><button aria-label="Save" data-save-expense="' + e.id + '"><i class="ti ti-check"></i></button>' +
+          '<button aria-label="Cancel" data-cancel-expense="' + e.id + '"><i class="ti ti-x"></i></button></div></div>';
+      }
       var confirming = state.deleteConfirmId === e.id;
+      var canEdit = e.type === "Variable";
       return '<div class="rw-row" style="min-height:auto;">' +
         '<div><div style="font-size:15px;font-weight:500;">' + (e.description || e.category) + '</div>' +
         '<div style="font-size:13px;color:var(--muted);">' + e.date.slice(5) + ', ' + e.category + '</div></div>' +
         '<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:15px;">' + fmtMoney(e.amount) + '</span>' +
+        (canEdit ? '<button class="icon-sm" data-edit-expense="' + e.id + '" aria-label="Edit"><i class="ti ti-pencil"></i></button>' : "") +
         (confirming
           ? '<button class="icon-sm" data-confirm-del="' + e.id + '" style="color:var(--warn);font-weight:600;font-size:11px;">Delete?</button>'
           : '<button class="icon-sm" data-del="' + e.id + '"><i class="ti ti-trash"></i></button>') +
@@ -450,6 +462,29 @@
         await supabase.from("expenses").delete().eq("id", btn.dataset.confirmDel);
         state.expenses = state.expenses.filter(function (e) { return e.id !== btn.dataset.confirmDel; });
         state.deleteConfirmId = null;
+        renderLog(); renderAnalysis();
+      });
+    });
+    document.querySelectorAll('[data-edit-expense]').forEach(function (btn) {
+      btn.addEventListener("click", function () { state.editingExpenseId = btn.dataset.editExpense; renderLog(); });
+    });
+    document.querySelectorAll('[data-cancel-expense]').forEach(function (btn) {
+      btn.addEventListener("click", function () { state.editingExpenseId = null; renderLog(); });
+    });
+    document.querySelectorAll('[data-save-expense]').forEach(function (btn) {
+      btn.addEventListener("click", async function () {
+        var id = btn.dataset.saveExpense;
+        var description = document.getElementById("ee-desc-" + id).value.trim();
+        var category = document.getElementById("ee-cat-" + id).value;
+        var amount = parseFloat(document.getElementById("ee-amount-" + id).value);
+        var date = document.getElementById("ee-date-" + id).value;
+        if (!amount || amount <= 0 || !date) return;
+        var updates = { description: description || category, category: category, amount: Math.round(amount * 100) / 100, date: date };
+        var { error } = await supabase.from("expenses").update(updates).eq("id", id);
+        if (error) { alert("Couldn't save: " + error.message); return; }
+        var expense = state.expenses.find(function (e) { return e.id === id; });
+        if (expense) Object.assign(expense, updates);
+        state.editingExpenseId = null;
         renderLog(); renderAnalysis();
       });
     });
@@ -691,7 +726,7 @@
 
   function semiRetireFieldsHtml(a) {
     return '<div class="rw-field"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:14px;">' +
-      '<input type="checkbox" id="a-semiretire-na" ' + (!a.semi_retire_date ? "checked" : "") + ' /><label for="a-semiretire-na" style="margin:0;">Not set yet</label></div>' +
+      '<input type="checkbox" id="a-semiretire-na" ' + (!a.semi_retire_date ? "checked" : "") + ' /><label for="a-semiretire-na" style="margin:0;display:inline-block;">Not set yet</label></div>' +
       '<div id="semiretire-date-wrap" style="display:' + (a.semi_retire_date ? "block" : "none") + ';">' + monthYearSelectHtml("a-semiretire", a.semi_retire_date) + '</div></div>';
   }
 
