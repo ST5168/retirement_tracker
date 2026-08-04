@@ -208,10 +208,12 @@
       .sort(function (a, b) { return b.amount - a.amount; });
   }
 
-  function dailyVariableSeries(now) {
-    var year = now.getFullYear(), month = now.getMonth();
+  function dailyVariableSeries(viewedDate, realNow) {
+    var year = viewedDate.getFullYear(), month = viewedDate.getMonth();
     var dim = new Date(year, month + 1, 0).getDate();
-    var todayDay = now.getDate();
+    var isRealCurrentMonth = year === realNow.getFullYear() && month === realNow.getMonth();
+    var isFutureMonth = viewedDate > new Date(realNow.getFullYear(), realNow.getMonth(), 1);
+    var todayDay = isRealCurrentMonth ? realNow.getDate() : (isFutureMonth ? 0 : dim);
     var monthPrefix = year + "-" + pad(month + 1) + "-";
     var dayTotals = {};
     state.expenses.forEach(function (e) {
@@ -275,21 +277,36 @@
     var totalAssets = cash + investments;
 
     var startDate = new Date(state.assumptions.start_date + "T00:00:00");
-    var now = new Date();
-    if (now < startDate) now = startDate;
-    var dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    var day = now.getDate();
+    var realNow = new Date();
+    if (realNow < startDate) realNow = startDate;
+
+    var vd = viewDate();
+    var atStart = state.viewMonthIdx === 0;
+    var isRealCurrentMonth = vd.getFullYear() === realNow.getFullYear() && vd.getMonth() === realNow.getMonth();
+    var isPastMonth = vd < new Date(realNow.getFullYear(), realNow.getMonth(), 1);
+
+    var dim = new Date(vd.getFullYear(), vd.getMonth() + 1, 0).getDate();
+    var day = isRealCurrentMonth ? realNow.getDate() : dim;
     var fixedBudget = fixedBudgetTotal();
     var variableBudget = parseFloat(state.assumptions.variable_budget) || 0;
     var totalBudget = fixedBudget + variableBudget;
-    var thisKey = monthKeyOf(now);
+    var thisKey = monthKeyOf(vd);
     var actual = actualsByMonth()[thisKey] || {};
     var spentSoFar = (actual.fixed != null ? actual.fixed : 0) + (actual.variable != null ? actual.variable : 0);
     var pctSpent = totalBudget > 0 ? Math.round((spentSoFar / totalBudget) * 100) : 0;
     var pctDays = Math.round((day / dim) * 100);
 
-    var vd = viewDate();
-    var atStart = state.viewMonthIdx === 0;
+    var monthLabel = isRealCurrentMonth ? "This month" : monthNameYear(vd);
+    var captionHtml;
+    if (isRealCurrentMonth) {
+      captionHtml = 'Day ' + day + ' of ' + dim + ' &middot; ' + monthNameYear(vd) + ', ' + (pctSpent > pctDays ? "ahead of pace" : "on pace");
+    } else if (isPastMonth) {
+      captionHtml = 'Ended the month at ' + pctSpent + '% of budget';
+    } else {
+      captionHtml = 'This month hasn&rsquo;t started yet';
+    }
+    var barColor = isRealCurrentMonth ? (pctSpent > pctDays ? "var(--warn)" : "var(--good)") : (pctSpent > 100 ? "var(--warn)" : "var(--good)");
+
     var cats = categoryBreakdownForMonth(vd);
     var maxCat = cats.length ? cats[0].amount : 1;
     var catRows = cats.length ? cats.map(function (c) {
@@ -313,10 +330,15 @@
         '<div class="stat-box"><div class="stat-label">Investments</div><div class="stat-value">' + fmtMoney(investments) + '</div></div>' +
         '<div class="stat-box"><div class="stat-label">Total assets</div><div class="stat-value">' + fmtMoney(totalAssets) + '</div></div>' +
       '</div>' +
+      '<div class="rw-monthnav">' +
+        '<button class="rw-monthbtn" id="an-prev" ' + (atStart ? "disabled" : "") + '><i class="ti ti-chevron-left"></i></button>' +
+        '<span style="font-size:15px;font-weight:600;">' + monthNameYear(vd) + '</span>' +
+        '<button class="rw-monthbtn" id="an-next"><i class="ti ti-chevron-right"></i></button>' +
+      '</div>' +
       '<div class="rw-card">' +
-        '<div style="display:flex;justify-content:space-between;font-size:15px;margin-bottom:8px;"><span style="color:var(--muted);">This month, incl. recurring</span><span style="font-weight:600;">' + fmtMoney(spentSoFar) + ' of ' + fmtMoney(totalBudget) + '</span></div>' +
-        '<div class="pace-bar-track"><div class="pace-bar-fill" style="width:' + Math.min(100, pctSpent) + '%;background:' + (pctSpent > pctDays ? "var(--warn)" : "var(--good)") + ';"></div></div>' +
-        '<div style="font-size:13px;color:var(--muted);margin-top:6px;">Day ' + day + ' of ' + dim + ' &middot; ' + monthNameYear(now) + ', ' + (pctSpent > pctDays ? "ahead of pace" : "on pace") + '</div>' +
+        '<div style="display:flex;justify-content:space-between;font-size:15px;margin-bottom:8px;"><span style="color:var(--muted);">' + monthLabel + ', incl. recurring</span><span style="font-weight:600;">' + fmtMoney(spentSoFar) + ' of ' + fmtMoney(totalBudget) + '</span></div>' +
+        '<div class="pace-bar-track"><div class="pace-bar-fill" style="width:' + Math.min(100, pctSpent) + '%;background:' + barColor + ';"></div></div>' +
+        '<div style="font-size:13px;color:var(--muted);margin-top:6px;">' + captionHtml + '</div>' +
       '</div>' +
       '<div class="rw-card">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
@@ -330,18 +352,14 @@
           '<span style="display:flex;align-items:center;gap:5px;"><span class="swatch" style="border-top:2px solid #2a78d6;"></span>Variable spend</span>' +
           '<span style="display:flex;align-items:center;gap:5px;"><span class="swatch" style="border-top:2px dashed var(--warn);"></span>Variable budget</span>' +
         '</div>' +
+        (state.analysisChartView !== "monthly" ? '<div style="font-size:11.5px;color:var(--muted-2);margin-bottom:8px;">Monthly always shows the most recent 6 months, independent of the navigator above</div>' : "") +
         '<div style="position:relative;width:100%;height:200px;"><canvas id="analysisChart"></canvas></div>' +
-      '</div>' +
-      '<div class="rw-monthnav">' +
-        '<button class="rw-monthbtn" id="an-prev" ' + (atStart ? "disabled" : "") + '><i class="ti ti-chevron-left"></i></button>' +
-        '<span style="font-size:15px;font-weight:600;">' + monthNameYear(vd) + '</span>' +
-        '<button class="rw-monthbtn" id="an-next"><i class="ti ti-chevron-right"></i></button>' +
       '</div>' +
       '<div class="rw-card"><div style="font-size:13px;color:var(--muted);margin-bottom:10px;">By category</div>' + catRows + '</div>' +
       '<div class="rw-card" style="display:flex;justify-content:space-between;align-items:center;">' +
         '<span style="font-size:14px;color:var(--muted);">Vs previous month</span><span style="font-size:14px;font-weight:600;">' + vsPrevText + '</span></div>';
 
-    renderAnalysisChart(now);
+    renderAnalysisChart(vd, realNow);
     document.getElementById("an-btn-daily").addEventListener("click", function () { state.analysisChartView = "daily"; renderAnalysis(); });
     document.getElementById("an-btn-monthly").addEventListener("click", function () { state.analysisChartView = "monthly"; renderAnalysis(); });
     document.getElementById("an-prev").addEventListener("click", function () { shiftAnalysisMonth(-1); });
@@ -353,13 +371,13 @@
     renderAnalysis();
   }
 
-  function renderAnalysisChart(now) {
+  function renderAnalysisChart(vd, realNow) {
     var canvas = document.getElementById("analysisChart");
     if (!canvas || typeof Chart === "undefined") return;
     if (analysisChart) { analysisChart.destroy(); analysisChart = null; }
 
     if (state.analysisChartView === "monthly") {
-      var m = monthlyTotalsSeries(now, 6);
+      var m = monthlyTotalsSeries(realNow, 6);
       analysisChart = new Chart(canvas, {
         type: "bar",
         data: { labels: m.labels, datasets: [{ data: m.totals, backgroundColor: "#2a78d6", borderRadius: 4, maxBarThickness: 28 }] },
@@ -368,7 +386,7 @@
             y: { grid: { color: "#e1e0d9" }, ticks: { color: "#898781", font: { size: 11 }, callback: function (v) { return "$" + (v / 1000) + "k"; } } } } }
       });
     } else {
-      var s = dailyVariableSeries(now);
+      var s = dailyVariableSeries(vd, realNow);
       var budgetVal = parseFloat(state.assumptions.variable_budget) || 0;
       var budgetLine = s.labels.map(function () { return budgetVal; });
       analysisChart = new Chart(canvas, {
