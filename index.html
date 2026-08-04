@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Retirement Planner</title>
-<link rel="stylesheet" href="styles.css?v=4" />
+<link rel="stylesheet" href="styles.css?v=5" />
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#2F6E52" />
 <meta name="mobile-web-app-capable" content="yes" />
@@ -32,23 +32,21 @@
     <div class="header-top">
       <div>
         <div class="eyebrow">Retirement Planner</div>
-        <div id="rw-title" class="month-title">Dashboard</div>
+        <div id="rw-title" class="month-title">Analysis</div>
       </div>
       <button id="signout-btn" class="icon-btn" aria-label="Sign out"><i class="ti ti-logout"></i></button>
     </div>
   </div>
 
-  <div class="rw-screen active" data-screen="home" id="screen-home"></div>
+  <div class="rw-screen active" data-screen="analysis" id="screen-analysis"></div>
   <div class="rw-screen" data-screen="log" id="screen-log"></div>
   <div class="rw-screen" data-screen="bills" id="screen-bills"></div>
-  <div class="rw-screen" data-screen="analysis" id="screen-analysis"></div>
   <div class="rw-screen" data-screen="plan" id="screen-plan"></div>
 
   <div class="tabbar">
-    <button class="rw-tabbtn active" data-tab="home"><i class="ti ti-home"></i>Home</button>
+    <button class="rw-tabbtn active" data-tab="analysis"><i class="ti ti-chart-bar"></i>Analysis</button>
     <button class="rw-tabbtn" data-tab="log"><i class="ti ti-plus"></i>Log</button>
     <button class="rw-tabbtn" data-tab="bills"><i class="ti ti-file-invoice"></i>Bills</button>
-    <button class="rw-tabbtn" data-tab="analysis"><i class="ti ti-chart-bar"></i>Analysis</button>
     <button class="rw-tabbtn" data-tab="plan"><i class="ti ti-flag"></i>Plan</button>
   </div>
 </div>
@@ -58,7 +56,7 @@
 <script src="https://unpkg.com/@tabler/icons-webfont@latest/dist/tabler-icons.min.js" defer></script>
 <link rel="stylesheet" href="https://unpkg.com/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
 <script src="config.js"></script>
-<script src="projection.js?v=2"></script>
-<script src="app.js?v=8"></script>
+<script src="projection.js?v=3"></script>
+<script src="app.js?v=9"></script>
 </body>
 </html>
